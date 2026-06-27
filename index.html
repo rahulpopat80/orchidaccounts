@@ -15,6 +15,11 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     
+    <!-- Firebase SDK Compat Core, Firestore, and Auth -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    
     <!-- SEO Meta Tags -->
     <meta name="description" content="Orchid Heights Society Accounting Software - Manage monthly expenses, income, bill scanning, WhatsApp reports, and balance sheets.">
     <meta name="author" content="Antigravity AI">
@@ -97,8 +102,12 @@
         <!-- Main Content Area -->
         <main class="main-content">
             <!-- Top Header Developer Banner -->
-            <div class="app-top-header no-print">
-                <span class="dev-tag"><i class="fas fa-check-circle"></i> Devloped by Rahul Popat</span>
+            <div class="app-top-header no-print" style="display: flex; justify-content: space-between; align-items: center; padding-bottom: 12px; margin-bottom: 16px;">
+                <div id="header-sync-indicator" class="sync-badge offline" style="cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 12px; background: var(--border-color); color: var(--text-muted); transition: all 0.2s;">
+                    <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #94a3b8;" class="dot"></span>
+                    <span class="text">Local Mode</span>
+                </div>
+                <span class="dev-tag" style="margin-left: auto;"><i class="fas fa-check-circle"></i> Devloped by Rahul Popat</span>
             </div>
             
             <!-- SECTION 1: DASHBOARD -->
@@ -749,6 +758,36 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Cloud Sync Panel -->
+                <div class="card cloud-sync-card" style="margin-top: 24px; border-color: rgba(59, 130, 246, 0.4); text-align: left; padding: 24px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px; margin-bottom: 20px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
+                            <i class="fas fa-cloud" style="font-size: 28px; color: var(--primary);"></i>
+                            <div>
+                                <h3 style="margin: 0; font-size: 18px; color: var(--text-main);">Cloud Data Sync</h3>
+                                <p style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted);">Sync database in real-time across all your devices.</p>
+                            </div>
+                        </div>
+                        <div id="cloud-sync-badge" class="sync-badge offline" style="display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px; background: var(--border-color); color: var(--text-muted);">
+                            <span style="display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #94a3b8;" class="dot"></span>
+                            <span class="text">Offline / Local Mode</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px;">
+                        <div style="flex: 1; min-width: 250px;">
+                            <p style="font-size: 14px; color: var(--text-muted); line-height: 1.5; margin: 0;">
+                                Enable cloud database integration to back up and synchronize all transaction entries, account heads, and opening balances to the cloud. Log in on multiple devices using the same credentials to keep all screens up to date.
+                            </p>
+                        </div>
+                        <div>
+                            <button type="button" class="btn btn-primary" id="btn-open-sync-setup" style="display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-cog"></i> <span>Setup Cloud Sync</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </section>
         </main>
     </div>
@@ -965,6 +1004,114 @@
         </div>
     </div>
 
+    <!-- MODAL 7: CLOUD SYNC CONFIGURATION -->
+    <div class="modal-overlay" id="cloud-sync-modal">
+        <div class="modal-content" style="max-width: 500px; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-cloud" style="color: var(--primary); margin-right: 8px;"></i>Cloud Sync Setup</h3>
+                <button class="close-modal" id="cloud-sync-modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <!-- Config Setup Tab / Auth Tab -->
+                <div id="cloud-sync-setup-step-1">
+                    <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                        To sync data across devices in real-time, please configure your Firebase database keys. If you don't have a Firebase project, you can create one for free on the Firebase Console.
+                    </p>
+                    
+                    <form id="cloud-config-form">
+                        <div class="form-grid" style="grid-template-columns: 1fr; gap: 12px; margin-bottom: 16px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="cloud-apiKey">Firebase API Key</label>
+                                <input type="password" id="cloud-apiKey" class="form-control" placeholder="AIzaSy..." required>
+                            </div>
+                            <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 0;">
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="cloud-projectId">Project ID</label>
+                                    <input type="text" id="cloud-projectId" class="form-control" placeholder="orchid-residency" required>
+                                </div>
+                                <div class="form-group" style="margin-bottom: 0;">
+                                    <label for="cloud-authDomain">Auth Domain</label>
+                                    <input type="text" id="cloud-authDomain" class="form-control" placeholder="orchid-residency.firebaseapp.com" required>
+                                </div>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="cloud-appId">App ID</label>
+                                <input type="text" id="cloud-appId" class="form-control" placeholder="1:12345678:web:abcd1234" required>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 16px; font-size: 12px; line-height: 1.4; color: var(--text-muted); background: var(--bg-app); padding: 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                            <strong>How to get these keys?</strong> Go to <a href="https://console.firebase.google.com/" target="_blank" style="color: var(--primary); text-decoration: underline;">Firebase Console</a> &rarr; Create Project &rarr; Add Web App &rarr; Copy the config object.
+                        </div>
+                        
+                        <div style="display: flex; justify-content: flex-end; gap: 12px; margin-top: 20px;">
+                            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Save Config & Continue</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="cloud-sync-setup-step-2" style="display: none;">
+                    <!-- Login / Registration Form -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+                        <h4 id="cloud-auth-title" style="margin: 0; color: var(--text-main);">Sign In to Society Account</h4>
+                        <button type="button" class="btn btn-secondary px-2 py-1" id="btn-cloud-change-config" style="font-size: 11px; padding: 4px 8px; height: auto;">
+                            <i class="fas fa-cog"></i> Config
+                        </button>
+                    </div>
+
+                    <form id="cloud-auth-form">
+                        <div class="form-grid" style="grid-template-columns: 1fr; gap: 12px; margin-bottom: 16px;">
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="cloud-email">Email Address</label>
+                                <input type="email" id="cloud-email" class="form-control" placeholder="treasurer@orchid.com" required>
+                            </div>
+                            <div class="form-group" style="margin-bottom: 0;">
+                                <label for="cloud-password">Password</label>
+                                <input type="password" id="cloud-password" class="form-control" placeholder="Min. 6 characters" required minlength="6">
+                            </div>
+                        </div>
+
+                        <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 20px;">
+                            <button type="submit" class="btn btn-primary" id="btn-cloud-auth-submit" style="width: 100%; justify-content: center;">Sign In</button>
+                            <button type="button" class="btn-text text-sm" id="btn-cloud-toggle-auth-mode" style="text-align: center; color: var(--primary); background: none; border: none; cursor: pointer; padding: 6px 0;">
+                                Need a new account? Register here
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <div id="cloud-sync-setup-step-active" style="display: none;">
+                    <!-- Configured / Active Sync View -->
+                    <div style="text-align: center; padding: 20px 0;">
+                        <i class="fas fa-check-circle" style="font-size: 48px; color: var(--success); margin-bottom: 12px;"></i>
+                        <h4 style="color: var(--text-main);">Cloud Sync is Active</h4>
+                        <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 20px;" id="cloud-sync-user-display">Logged in as: -</p>
+                    </div>
+
+                    <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px; margin-bottom: 24px; font-size: 13.5px;">
+                        <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                            <span style="color: var(--text-muted);">Sync Status:</span>
+                            <span style="font-weight: 600; color: var(--success);">Connected & Live</span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between;">
+                            <span style="color: var(--text-muted);">Firebase Project:</span>
+                            <span id="cloud-active-project-id" style="font-weight: 600; color: var(--primary);">-</span>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; gap: 12px;">
+                        <button type="button" class="btn btn-secondary" id="btn-cloud-logout" style="background-color: var(--danger-light); color: var(--danger-dark); border-color: var(--danger-light); flex-grow: 1; justify-content: center;">
+                            <i class="fas fa-sign-out-alt"></i> Sign Out
+                        </button>
+                        <button type="button" class="btn btn-secondary" id="btn-cloud-close" style="flex-grow: 1; justify-content: center;">
+                            Close
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- TOAST NOTIFICATION CONTAINER -->
     <div class="toast-notification" id="toast">
         <i class="toast-icon fas fa-check-circle" id="toast-icon"></i>
@@ -975,6 +1122,7 @@
     <script src="js/data.js"></script>
     <script src="js/ocr.js"></script>
     <script src="js/canvas-export.js"></script>
+    <script src="js/sync.js"></script>
     <script src="js/app.js"></script>
 
 </body>

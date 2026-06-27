@@ -159,18 +159,30 @@ class SocietyDB {
     // Setters / Modifiers
     saveTransactions(transactions) {
         localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(transactions));
+        if (typeof syncManager !== 'undefined' && syncManager.active && !syncManager.isSyncingFromServer) {
+            syncManager.syncFullTransactions(transactions);
+        }
     }
 
     saveIncomeHeads(heads) {
         localStorage.setItem(STORAGE_KEYS.INCOME_HEADS, JSON.stringify(heads));
+        if (typeof syncManager !== 'undefined' && syncManager.active && !syncManager.isSyncingFromServer) {
+            syncManager.syncFullCategories("income", heads);
+        }
     }
 
     saveExpenseHeads(heads) {
         localStorage.setItem(STORAGE_KEYS.EXPENSE_HEADS, JSON.stringify(heads));
+        if (typeof syncManager !== 'undefined' && syncManager.active && !syncManager.isSyncingFromServer) {
+            syncManager.syncFullCategories("expense", heads);
+        }
     }
 
     saveOpeningBalances(balances) {
         localStorage.setItem(STORAGE_KEYS.OPENING_BALANCES, JSON.stringify(balances));
+        if (typeof syncManager !== 'undefined' && syncManager.active && !syncManager.isSyncingFromServer) {
+            syncManager.uploadOpeningBalances(balances);
+        }
     }
 
     // Transaction CRUD

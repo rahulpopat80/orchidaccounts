@@ -1252,3 +1252,43 @@ tbody tr:hover {
         display: none !important;
     }
 }
+
+/* Cloud Sync Styles */
+.sync-badge.online {
+    background-color: var(--success-light) !important;
+    color: var(--success-dark) !important;
+}
+.sync-badge.online .dot {
+    background-color: var(--success) !important;
+}
+
+.sync-badge.syncing {
+    background-color: #fef3c7 !important;
+    color: #92400e !important;
+}
+.sync-badge.syncing .dot {
+    background-color: #f59e0b !important;
+    animation: pulse 1.2s infinite ease-in-out;
+}
+
+.sync-badge.offline {
+    background-color: var(--border-color) !important;
+    color: var(--text-muted) !important;
+}
+.sync-badge.offline .dot {
+    background-color: var(--text-muted) !important;
+}
+
+.sync-badge.error {
+    background-color: var(--danger-light) !important;
+    color: var(--danger-dark) !important;
+}
+.sync-badge.error .dot {
+    background-color: var(--danger) !important;
+}
+
+@keyframes pulse {
+    0% { transform: scale(0.8); opacity: 0.5; }
+    50% { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(0.8); opacity: 0.5; }
+}
