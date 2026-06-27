@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orchid Society Accounting Manager</title>
+    <!-- Google Fonts: Inter (English) & Noto Sans Gujarati (Gujarati) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+Gujarati:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- SheetJS Local Library for offline Excel parsing -->
+    <script src="xlsx.full.min.js"></script>
+    <!-- Firebase SDK Compat Core, Firestore, and Auth -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <div class="brand-icon">🌸</div>
+                <div class="brand-text">
+                    <h2>Orchid</h2>
+                    <span>Society Manager</span>
+                </div>
+            </div>
+            <nav class="sidebar-menu">
+                <a href="#" class="menu-item active" data-tab="dashboard">
+                    <span class="menu-icon">📊</span>
+                    <span class="menu-label">Dashboard</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="members">
+                    <span class="menu-icon">👥</span>
+                    <span class="menu-label">Member Registry</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="expenses">
+                    <span class="menu-icon">💸</span>
+                    <span class="menu-label">Expense Log</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="maintenance">
+                    <span class="menu-icon">💳</span>
+                    <span class="menu-label">Maintenance Bill</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="reports">
+                    <span class="menu-icon">📈</span>
+                    <span class="menu-label">Reports</span>
+                </a>
+                <a href="#" class="menu-item" data-tab="settings">
+                    <span class="menu-icon">⚙️</span>
+                    <span class="menu-label">Settings</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <div class="lang-toggle" id="lang-toggle-btn">
+                    <span>Change Language</span>
+                    <button class="btn-lang" id="lang-btn">ગુજરાતી</button>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Workspace -->
+        <div class="main-workspace">
+            <header class="main-header">
+                <div class="header-title">
+                    <h1 id="header-page-title">Dashboard</h1>
+                    <p class="text-secondary" id="header-page-subtitle">Overview of Orchid Society accounts</p>
+                </div>
+                <div class="header-actions">
+                    <button class="btn btn-secondary" id="btn-cloud-sync" style="display: none;">
+                        <span id="sync-icon">☁️</span> <span id="sync-text">Cloud Sync</span>
+                    </button>
+                    <button class="btn btn-secondary" id="btn-quick-import-excel">
+                        <span>📥</span> Import Excel
+                    </button>
+                    <button class="btn btn-primary" id="btn-quick-add-expense">
+                        <span>➕</span> Record Expense
+                    </button>
+                </div>
+            </header>
+
+            <main class="content-area">
+                <!-- TAB: DASHBOARD -->
+                <section class="tab-content active" id="tab-dashboard">
+                    <!-- KPI Cards -->
+                    <div class="kpi-grid">
+                        <div class="kpi-card income">
+                            <div class="kpi-info">
+                                <span class="kpi-label">Total Income</span>
+                                <h3 class="kpi-value" id="kpi-total-income">₹0.00</h3>
+                                <span class="kpi-subtext" id="kpi-subtext-income">From maintenance & other sources</span>
+                            </div>
+                            <div class="kpi-icon-wrapper">📥</div>
+                        </div>
+                        <div class="kpi-card expense">
+                            <div class="kpi-info">
+                                <span class="kpi-label">Total Expenses</span>
+                                <h3 class="kpi-value" id="kpi-total-expenses">₹0.00</h3>
+                                <span class="kpi-subtext" id="kpi-subtext-expenses">All operational expenses logged</span>
+                            </div>
+                            <div class="kpi-icon-wrapper">📤</div>
+                        </div>
+                        <div class="kpi-card balance">
+                            <div class="kpi-info">
+                                <span class="kpi-label">Net Balance</span>
+                                <h3 class="kpi-value" id="kpi-net-balance">₹0.00</h3>
+                                <span class="kpi-subtext" id="kpi-subtext-balance">Available cash reserves</span>
+                            </div>
+                            <div class="kpi-icon-wrapper">💼</div>
+                        </div>
+                        <div class="kpi-card dues">
+                            <div class="kpi-info">
+                                <span class="kpi-label">Outstanding Dues</span>
+                                <h3 class="kpi-value" id="kpi-outstanding-dues">₹0.00</h3>
+                                <span class="kpi-subtext" id="kpi-subtext-dues">Pending member maintenance</span>
+                            </div>
+                            <div class="kpi-icon-wrapper">⚠️</div>
+                        </div>
+                    </div>
+
+                    <!-- Charts & Recent Activity -->
+                    <div class="dashboard-grid">
+                        <div class="panel chart-panel">
+                            <div class="panel-header">
+                                <h3>Expense Category Breakdown</h3>
+                                <span class="text-secondary text-sm">Visual distribution of expenses</span>
+                            </div>
+                            <div class="panel-body chart-container" id="expense-chart-container">
+                                <!-- SVG Pie Chart will be injected here -->
+                                <div class="chart-fallback">Loading chart data...</div>
+                            </div>
+                        </div>
+
+                        <div class="panel activity-panel">
+                            <div class="panel-header">
+                                <h3>Recent Transactions</h3>
+                                <button class="btn-text" id="btn-dashboard-view-all">View All</button>
+                            </div>
+                            <div class="panel-body">
+                                <div class="transaction-list" id="dashboard-recent-transactions">
+                                    <!-- Dynamic transactions list -->
+                                    <div class="empty-state">No transactions recorded yet.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB: MEMBERS -->
+                <section class="tab-content" id="tab-members">
+                    <div class="panel">
+                        <div class="panel-header flex-row justify-between">
+                            <div>
+                                <h3>Member Directory</h3>
+                                <p class="text-secondary text-sm">List of flat owners, types, and statuses</p>
+                            </div>
+                            <button class="btn btn-primary" id="btn-add-member">
+                                <span>➕</span> Add Member
+                            </button>
+                        </div>
+                        <div class="panel-body">
+                            <div class="table-actions">
+                                <input type="text" id="member-search" class="form-control search-input" placeholder="Search members by name or flat...">
+                                <select id="member-filter-type" class="form-control filter-select">
+                                    <option value="all">All Flat Types</option>
+                                    <option value="3 BHK">3 BHK</option>
+                                    <option value="4 BHK">4 BHK</option>
+                                </select>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table" id="members-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Flat No</th>
+                                            <th>Wing</th>
+                                            <th>Owner Name</th>
+                                            <th>Flat Type</th>
+                                            <th>Monthly Charge</th>
+                                            <th>Outstanding Dues</th>
+                                            <th class="text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="members-table-body">
+                                        <!-- Members rows injected dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB: EXPENSES -->
+                <section class="tab-content" id="tab-expenses">
+                    <div class="panel">
+                        <div class="panel-header flex-row justify-between">
+                            <div>
+                                <h3>Expense Records</h3>
+                                <p class="text-secondary text-sm">Detailed logs of society expenditures</p>
+                            </div>
+                            <div class="flex-row gap-2">
+                                <button class="btn btn-secondary" id="btn-import-excel-exp">
+                                    <span>📥</span> Import from Excel
+                                </button>
+                                <button class="btn btn-primary" id="btn-add-expense-manual">
+                                    <span>➕</span> Record Expense
+                                </button>
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            <div class="table-actions">
+                                <input type="text" id="expense-search" class="form-control search-input" placeholder="Search expenses (e.g. generator, cleaning, સફાઈ)...">
+                                <select id="expense-filter-category" class="form-control filter-select">
+                                    <option value="all">All Categories</option>
+                                    <!-- Dynamic categories -->
+                                </select>
+                            </div>
+                            <div class="table-responsive">
+                                <table class="table" id="expenses-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Expense Item (ગુજરાતી / English)</th>
+                                            <th>Category</th>
+                                            <th class="text-right">Amount</th>
+                                            <th class="text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="expenses-table-body">
+                                        <!-- Expenses injected dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB: MAINTENANCE BILLING -->
+                <section class="tab-content" id="tab-maintenance">
+                    <div class="panel">
+                        <div class="panel-header flex-row justify-between">
+                            <div>
+                                <h3>Maintenance Collection Ledger</h3>
+                                <p class="text-secondary text-sm">Track monthly maintenance collections and dues</p>
+                            </div>
+                            <div class="flex-row gap-2 align-center">
+                                <label for="billing-year-select" class="text-sm font-medium">Select Year:</label>
+                                <select id="billing-year-select" class="form-control select-sm">
+                                    <option value="2024">2024</option>
+                                    <option value="2025">2025</option>
+                                    <option value="2026" selected>2026</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="panel-body">
+                            <div class="billing-months-tabs" id="billing-months-list">
+                                <!-- Months tabs generated here -->
+                            </div>
+                            <div class="table-responsive margin-top-4">
+                                <table class="table" id="maintenance-billing-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Flat No</th>
+                                            <th>Member Name</th>
+                                            <th>Flat Type</th>
+                                            <th>Bill Month</th>
+                                            <th>Bill Amount</th>
+                                            <th>Status</th>
+                                            <th>Payment Date</th>
+                                            <th class="text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="maintenance-table-body">
+                                        <!-- Billing status dynamically loaded -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB: REPORTS -->
+                <section class="tab-content" id="tab-reports">
+                    <div class="panel print-panel">
+                        <div class="panel-header flex-row justify-between print-hidden">
+                            <div>
+                                <h3>Financial Reports</h3>
+                                <p class="text-secondary text-sm">Download, filter, and print accounting summaries</p>
+                            </div>
+                            <button class="btn btn-secondary" onclick="window.print()">
+                                <span>🖨️</span> Print Report
+                            </button>
+                        </div>
+                        <div class="panel-body">
+                            <!-- Report Filter Header -->
+                            <div class="report-filter-bar print-hidden">
+                                <div class="filter-group">
+                                    <label class="text-xs font-semibold text-secondary uppercase">From Date</label>
+                                    <input type="date" id="report-from-date" class="form-control">
+                                </div>
+                                <div class="filter-group">
+                                    <label class="text-xs font-semibold text-secondary uppercase">To Date</label>
+                                    <input type="date" id="report-to-date" class="form-control">
+                                </div>
+                                <button class="btn btn-primary margin-top-auto" id="btn-generate-report">Generate Statement</button>
+                            </div>
+
+                            <!-- Printable Statement Container -->
+                            <div class="printable-statement" id="report-statement-view">
+                                <div class="statement-header">
+                                    <h2 class="text-center font-bold">ORCHID CO-OPERATIVE HOUSING SOCIETY</h2>
+                                    <p class="text-center text-sm text-secondary" id="report-period-text">Statement Period: All Time</p>
+                                    <hr class="statement-divider">
+                                </div>
+
+                                <div class="statement-grid">
+                                    <div class="statement-section">
+                                        <h4 class="section-title">Income Summary (આવક વિગત)</h4>
+                                        <table class="statement-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Source</th>
+                                                    <th class="text-right">Amount (₹)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="report-income-body">
+                                                <!-- Dynamic Income -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    <div class="statement-section">
+                                        <h4 class="section-title">Expense Summary (ખર્ચ વિગત)</h4>
+                                        <table class="statement-table">
+                                            <thead>
+                                                <tr>
+                                                    <th>Category</th>
+                                                    <th class="text-right">Amount (₹)</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="report-expense-body">
+                                                <!-- Dynamic Expense Categories -->
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div class="statement-totals-box">
+                                    <div class="totals-row">
+                                        <span>Total Income (કુલ આવક):</span>
+                                        <span id="report-total-income-val" class="font-semibold text-success">₹0.00</span>
+                                    </div>
+                                    <div class="totals-row">
+                                        <span>Total Expenses (કુલ ખર્ચ):</span>
+                                        <span id="report-total-expense-val" class="font-semibold text-danger">₹0.00</span>
+                                    </div>
+                                    <div class="totals-row grand-total">
+                                        <span>Net Balance (ચોખ્ખી સિલક):</span>
+                                        <span id="report-net-balance-val" class="font-bold">₹0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB: SETTINGS -->
+                <section class="tab-content" id="tab-settings">
+                    <div class="settings-grid">
+                        <!-- Maintenance Setup -->
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h3>Maintenance Charge Configuration</h3>
+                                <p class="text-secondary text-sm">Define monthly charges based on apartment type</p>
+                            </div>
+                            <div class="panel-body">
+                                <form id="settings-maintenance-form">
+                                    <div class="form-group">
+                                        <label for="rate-3bhk" class="form-label">Monthly Maintenance for 3 BHK (₹)</label>
+                                        <input type="number" id="rate-3bhk" class="form-control" min="0" required>
+                                    </div>
+                                    <div class="form-group margin-top-3">
+                                        <label for="rate-4bhk" class="form-label">Monthly Maintenance for 4 BHK (₹)</label>
+                                        <input type="number" id="rate-4bhk" class="form-control" min="0" required>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary margin-top-4">Save Configuration</button>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Firebase Configuration -->
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h3>Firebase Cloud Setup</h3>
+                                <p class="text-secondary text-sm">Synchronize database with your Firebase project</p>
+                            </div>
+                            <div class="panel-body">
+                                <form id="settings-firebase-form">
+                                    <div class="form-group">
+                                        <label for="fb-api-key" class="form-label">API Key</label>
+                                        <input type="password" id="fb-api-key" class="form-control" placeholder="AIzaSy...">
+                                    </div>
+                                    <div class="form-group margin-top-2">
+                                        <label for="fb-auth-domain" class="form-label">Auth Domain</label>
+                                        <input type="text" id="fb-auth-domain" class="form-control" placeholder="project-id.firebaseapp.com">
+                                    </div>
+                                    <div class="form-group margin-top-2">
+                                        <label for="fb-project-id" class="form-label">Project ID</label>
+                                        <input type="text" id="fb-project-id" class="form-control" placeholder="project-id">
+                                    </div>
+                                    <div class="form-group margin-top-2">
+                                        <label for="fb-app-id" class="form-label">App ID</label>
+                                        <input type="text" id="fb-app-id" class="form-control" placeholder="1:1234:web:abcd...">
+                                    </div>
+                                    <div class="flex-row justify-between margin-top-4 gap-2">
+                                        <button type="submit" class="btn btn-primary">Save Config & Link</button>
+                                        <button type="button" class="btn btn-secondary btn-sm" id="btn-logout-fb" style="display: none;">Sign Out</button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Data Management -->
+                        <div class="panel">
+                            <div class="panel-header">
+                                <h3>Database & Backup Control</h3>
+                                <p class="text-secondary text-sm">Export local data or reset database</p>
+                            </div>
+                            <div class="panel-body flex-col gap-3">
+                                <div class="settings-action-row">
+                                    <div>
+                                        <h4 class="font-semibold">Backup Database</h4>
+                                        <p class="text-xs text-secondary">Export all data (members, expenses, payments) to a JSON file</p>
+                                    </div>
+                                    <button class="btn btn-secondary btn-sm" id="btn-export-backup">Backup Data</button>
+                                </div>
+                                <hr class="divider">
+                                <div class="settings-action-row">
+                                    <div>
+                                        <h4 class="font-semibold">Restore Backup</h4>
+                                        <p class="text-xs text-secondary">Upload a previously exported JSON backup file</p>
+                                    </div>
+                                    <div class="file-upload-sm">
+                                        <input type="file" id="restore-file-input" accept=".json" class="hidden">
+                                        <button class="btn btn-secondary btn-sm" id="btn-trigger-restore">Restore Backup</button>
+                                    </div>
+                                </div>
+                                <hr class="divider">
+                                <div class="settings-action-row">
+                                    <div>
+                                        <h4 class="font-semibold text-danger">Reset Application Database</h4>
+                                        <p class="text-xs text-secondary">Delete all data in the local store and revert to default members list</p>
+                                    </div>
+                                    <button class="btn btn-danger btn-sm" id="btn-reset-db">Reset Database</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD MEMBER -->
+    <div class="modal-backdrop" id="modal-add-member">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="member-modal-title">Add New Member</h3>
+                <button class="btn-close" onclick="closeModal('modal-add-member')">×</button>
+            </div>
+            <form id="member-form">
+                <input type="hidden" id="edit-member-id">
+                <div class="modal-body">
+                    <div class="form-row">
+                        <div class="form-group flex-1">
+                            <label for="member-flat" class="form-label">Flat Number</label>
+                            <input type="text" id="member-flat" class="form-control" placeholder="e.g. 101" required>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="member-wing" class="form-label">Wing</label>
+                            <input type="text" id="member-wing" class="form-control" placeholder="e.g. A" required>
+                        </div>
+                    </div>
+                    <div class="form-group margin-top-3">
+                        <label for="member-name" class="form-label">Owner Name</label>
+                        <input type="text" id="member-name" class="form-control" placeholder="Enter owner's full name" required>
+                    </div>
+                    <div class="form-group margin-top-3">
+                        <label for="member-type" class="form-label">Flat Type</label>
+                        <select id="member-type" class="form-control" required>
+                            <option value="3 BHK">3 BHK</option>
+                            <option value="4 BHK">4 BHK</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-member')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Member</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: RECORD EXPENSE -->
+    <div class="modal-backdrop" id="modal-add-expense">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="expense-modal-title">Record Expense</h3>
+                <button class="btn-close" onclick="closeModal('modal-add-expense')">×</button>
+            </div>
+            <form id="expense-form">
+                <input type="hidden" id="edit-expense-id">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="expense-item" class="form-label">Expense Description (ગુજરાતી / English)</label>
+                        <input type="text" id="expense-item" class="form-control" placeholder="e.g. ડીઝલ જનરેટર / Diesel Generator" required>
+                    </div>
+                    <div class="form-row margin-top-3">
+                        <div class="form-group flex-1">
+                            <label for="expense-date" class="form-label">Date</label>
+                            <input type="date" id="expense-date" class="form-control" required>
+                        </div>
+                        <div class="form-group flex-1">
+                            <label for="expense-amount" class="form-label">Amount (₹)</label>
+                            <input type="number" id="expense-amount" class="form-control" min="0" step="any" placeholder="0.00" required>
+                        </div>
+                    </div>
+                    <div class="form-group margin-top-3">
+                        <label for="expense-category" class="form-label">Expense Category</label>
+                        <select id="expense-category" class="form-control" required>
+                            <option value="Security">Security (સિક્યુરીટી)</option>
+                            <option value="Cleaning">Cleaning (સફાઈ)</option>
+                            <option value="Repairs & Maintenance">Repairs & Maintenance (રીપેરીંગ/જાળવણી)</option>
+                            <option value="Electricity & Power">Electricity & Power (વીજળી બીલ/જનરેટર)</option>
+                            <option value="Gardening">Gardening (બગીચો)</option>
+                            <option value="Other">Other Operational (અન્ય ખર્ચ)</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('modal-add-expense')">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Expense</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: EXCEL IMPORT -->
+    <div class="modal-backdrop" id="modal-import-excel">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Import Society Expenditures from Excel</h3>
+                <button class="btn-close" onclick="closeModal('modal-import-excel')">×</button>
+            </div>
+            <div class="modal-body">
+                <p class="text-sm text-secondary margin-bottom-3">
+                    Upload an Excel spreadsheet (like <code>Orchid 4 Months Payment.xlsx</code>). The importer will look for columns named <strong>કાર્ય</strong> (Task), <strong>તારીખ</strong> (Date), and <strong>ખર્ચ</strong> (Amount).
+                </p>
+                <div class="drag-drop-zone" id="drag-drop-area">
+                    <div class="drag-drop-icon">📂</div>
+                    <p class="drag-drop-text">Drag & drop your Excel file here, or <span class="text-primary font-semibold pointer" id="file-picker-link">browse files</span></p>
+                    <span class="text-xs text-secondary">Accepts .xlsx, .xls, .csv</span>
+                    <input type="file" id="excel-file-input" accept=".xlsx, .xls, .csv" class="hidden">
+                </div>
+                <!-- File details & loading indicator -->
+                <div id="import-details" class="hidden margin-top-3">
+                    <div class="import-status-card">
+                        <div class="flex-row justify-between align-center">
+                            <span class="font-semibold" id="import-file-name">filename.xlsx</span>
+                            <span class="badge" id="import-row-count">0 rows found</span>
+                        </div>
+                        <div class="import-progress-bar margin-top-2">
+                            <div class="progress-fill" id="import-progress-fill" style="width: 0%"></div>
+                        </div>
+                        <p class="text-xs text-secondary margin-top-2" id="import-status-text">Ready to parse...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('modal-import-excel')">Cancel</button>
+                <button type="button" class="btn btn-primary" id="btn-confirm-import" disabled>Start Import</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- LOGIN / REGISTER OVERLAY FOR CLOUD MODE -->
+    <div class="modal-backdrop" id="modal-auth-overlay" style="align-items: center; justify-content: center; background-color: rgba(11, 15, 25, 0.9);">
+        <div class="modal-content" style="max-width: 420px; box-shadow: 0 0 40px rgba(59, 130, 246, 0.15);">
+            <div class="modal-header">
+                <h3 id="auth-modal-title">Sign In to Cloud</h3>
+            </div>
+            <form id="auth-form">
+                <div class="modal-body">
+                    <p class="text-xs text-secondary margin-bottom-3 text-center" id="auth-help-text">
+                        Your society accounts are protected. Sign in to synchronize your local database with Firebase.
+                    </p>
+                    <div class="form-group">
+                        <label for="auth-email" class="form-label">Email Address</label>
+                        <input type="email" id="auth-email" class="form-control" placeholder="treasurer@orchid.com" required autocomplete="username">
+                    </div>
+                    <div class="form-group margin-top-3">
+                        <label for="auth-password" class="form-label">Password</label>
+                        <input type="password" id="auth-password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+                    </div>
+                </div>
+                <div class="modal-footer" style="flex-direction: column; gap: 8px;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%;" id="btn-auth-submit">Sign In</button>
+                    <button type="button" class="btn-text text-sm" style="width: 100%; margin-top: 8px;" id="btn-toggle-auth-mode">Need a new account? Register here</button>
+                    <button type="button" class="btn-text text-xs text-secondary" style="width: 100%; margin-top: 4px;" id="btn-bypass-auth-dialog">Bypass & Use Local Offline Mode</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="app.js"></script>
+</body>
+</html>

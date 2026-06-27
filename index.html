@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🌸 Orchid Heights Accounting Software</title>
+    <!-- Icons and Font Linkages -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="css/style.css">
+    
+    <!-- SheetJS CDN for Excel (.xlsx) sheet parsing and creation -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    
+    <!-- jsPDF and jspdf-autotable CDN for PDF generation and preview -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+    
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="Orchid Heights Society Accounting Software - Manage monthly expenses, income, bill scanning, WhatsApp reports, and balance sheets.">
+    <meta name="author" content="Antigravity AI">
+</head>
+<body>
+
+    <div class="app-container">
+        
+        <!-- Sidebar Navigation (Desktop) -->
+        <aside class="sidebar">
+            <!-- Developer Credit Badge -->
+            <div class="developer-credit-top">
+                <i class="fas fa-code"></i> Devloped by Rahul Popat
+            </div>
+            
+            <div class="sidebar-header">
+                <div class="logo-container">
+                    <!-- Relative path to uploaded logo asset in brain folder -->
+                    <img src="../../brain/225c9f60-c27f-466e-a355-582c6ebd7961/media__1782475273284.jpg" alt="Orchid Heights Logo" id="sidebar-logo">
+                </div>
+                <div class="brand-info">
+                    <span class="brand-text" data-translate="app_title">Orchid Heights</span>
+                    <span class="brand-tagline" data-translate="app_tagline">Accounting Software</span>
+                </div>
+            </div>
+            
+            <ul class="nav-menu">
+                <li class="nav-item active" data-tab="dashboard">
+                    <a><i class="fas fa-chart-line"></i> <span data-translate="nav_dashboard">Dashboard</span></a>
+                </li>
+                <li class="nav-item" data-tab="entry">
+                    <a><i class="fas fa-plus-circle"></i> <span data-translate="nav_entry">New Entry</span></a>
+                </li>
+                <li class="nav-item" data-tab="reports">
+                    <a><i class="fas fa-file-invoice-dollar"></i> <span data-translate="nav_reports">Monthly Report</span></a>
+                </li>
+                <li class="nav-item" data-tab="balance">
+                    <a><i class="fas fa-balance-scale"></i> <span data-translate="nav_balance">Balance Sheet</span></a>
+                </li>
+                <li class="nav-item" data-tab="heads">
+                    <a><i class="fas fa-tags"></i> <span data-translate="nav_heads">Account Heads</span></a>
+                </li>
+                <li class="nav-item" data-tab="backup">
+                    <a><i class="fas fa-database"></i> <span data-translate="nav_backup">Backup / Restore</span></a>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <!-- Theme Toggle -->
+                <div class="theme-toggle-container">
+                    <span id="theme-text" data-translate="theme_light">Theme</span>
+                    <label class="switch">
+                        <input type="checkbox" id="theme-checkbox">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Mobile Bottom Nav -->
+        <nav class="mobile-nav">
+            <a class="mobile-nav-item active" data-tab="dashboard">
+                <i class="fas fa-chart-line"></i>
+                <span data-translate="nav_dashboard">Dashboard</span>
+            </a>
+            <a class="mobile-nav-item" data-tab="entry">
+                <i class="fas fa-plus-circle"></i>
+                <span data-translate="nav_entry">New Entry</span>
+            </a>
+            <a class="mobile-nav-item" data-tab="reports">
+                <i class="fas fa-file-invoice-dollar"></i>
+                <span data-translate="nav_reports">Report</span>
+            </a>
+            <a class="mobile-nav-item" data-tab="balance">
+                <i class="fas fa-balance-scale"></i>
+                <span data-translate="nav_balance">Balance Sheet</span>
+            </a>
+        </nav>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Top Header Developer Banner -->
+            <div class="app-top-header no-print">
+                <span class="dev-tag"><i class="fas fa-check-circle"></i> Devloped by Rahul Popat</span>
+            </div>
+            
+            <!-- SECTION 1: DASHBOARD -->
+            <section id="section-dashboard" class="page-section active">
+                <div class="content-header">
+                    <h1 class="page-title" data-translate="dashboard_title">Society Accounting Dashboard</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="switchTab('entry')">
+                            <i class="fas fa-plus"></i> <span data-translate="action_add_expense">Add Expense</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Stats Summary Cards -->
+                <div class="summary-grid">
+                    <div class="card">
+                        <div class="card-accent income"></div>
+                        <div class="card-header">
+                            <span class="card-title" data-translate="total_income">Total Income</span>
+                            <div class="card-icon income"><i class="fas fa-arrow-down"></i></div>
+                        </div>
+                        <div class="card-value" id="stat-income">₹ 0</div>
+                        <div class="card-desc" id="dashboard-month-desc">Current Month Transactions</div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-accent expense"></div>
+                        <div class="card-header">
+                            <span class="card-title" data-translate="total_expense">Total Expense</span>
+                            <div class="card-icon expense"><i class="fas fa-arrow-up"></i></div>
+                        </div>
+                        <div class="card-value" id="stat-expense">₹ 0</div>
+                        <div class="card-desc">Monthly Paid Bills & Expenses</div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-accent savings"></div>
+                        <div class="card-header">
+                            <span class="card-title" data-translate="net_savings">Net Savings</span>
+                            <div class="card-icon savings"><i class="fas fa-wallet"></i></div>
+                        </div>
+                        <div class="card-value" id="stat-savings">₹ 0</div>
+                        <div class="card-desc">Monthly Net Surplus</div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-accent fd"></div>
+                        <div class="card-header">
+                            <span class="card-title" data-translate="fd_investments">Fixed Deposits</span>
+                            <div class="card-icon fd"><i class="fas fa-piggy-bank"></i></div>
+                        </div>
+                        <div class="card-value" id="stat-fd">₹ 0</div>
+                        <div class="card-desc">Bank Interest Earning Investments</div>
+                    </div>
+                </div>
+
+                <!-- Graphs and Recent transactions -->
+                <div class="dashboard-grid">
+                    <div class="card chart-card">
+                        <h3 data-translate="chart_title">Last 6 Months Income vs Expense</h3>
+                        <div id="chart-container" class="chart-container">
+                            <!-- SVG Chart injected by JS -->
+                        </div>
+                    </div>
+
+                    <div class="card" style="display: flex; flex-direction: column;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; flex-wrap: wrap; gap: 8px;">
+                            <h3 data-translate="recent_transactions" style="margin-bottom: 0;">Recent Transactions</h3>
+                            <div class="search-input-wrapper" style="position: relative; display: flex; align-items: center; width: 200px;">
+                                <i class="fas fa-search" style="position: absolute; left: 10px; color: var(--text-muted); font-size: 13px;"></i>
+                                <input type="text" id="dashboard-search-input" class="form-control" placeholder="Search..." style="padding-left: 30px; font-size: 13px; padding-top: 6px; padding-bottom: 6px; margin-bottom: 0; height: 32px; width: 100%;">
+                            </div>
+                        </div>
+                        <div class="table-responsive" style="flex-grow: 1; margin-top: 0;">
+                            <table style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th data-translate="col_date">Date</th>
+                                        <th data-translate="col_type">Type</th>
+                                        <th data-translate="col_head">Head</th>
+                                        <th data-translate="col_amount">Amount</th>
+                                        <th data-translate="col_mode">Mode</th>
+                                        <th data-translate="col_desc">Description</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recent-transactions-list">
+                                    <!-- Dynamic rows loaded from localStorage -->
+                                </tbody>
+                            </table>
+                        </div>
+                        <button class="btn btn-secondary" style="margin-top: 12px; width: 100%; justify-content: center;" onclick="switchTab('reports')">
+                            <i class="fas fa-list"></i> View All Reports
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 2: TRANSACTION ENTRY -->
+            <section id="section-entry" class="page-section">
+                <div class="content-header">
+                    <h1 class="page-title" data-translate="entry_title">Add / Edit Transaction Entry</h1>
+                </div>
+
+                <div class="dashboard-grid" style="grid-template-columns: 1.2fr 1fr;">
+                    
+                    <!-- Entry Form -->
+                    <div class="card">
+                        <form id="tx-form">
+                            <div class="form-grid">
+                                <div class="form-group">
+                                    <label for="tx-type" data-translate="entry_type">Transaction Type</label>
+                                    <select id="tx-type" class="form-control">
+                                        <option value="expense" data-translate="type_expense" selected>Expense</option>
+                                        <option value="income" data-translate="type_income">Income</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="tx-head" data-translate="select_head">Select Account Head</label>
+                                    <select id="tx-head" class="form-control" required>
+                                        <!-- Loaded by JS -->
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="tx-amount" data-translate="amount_label">Amount (₹)</label>
+                                    <input type="number" id="tx-amount" class="form-control" placeholder="1000" min="1" step="any" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="tx-date" data-translate="date_label">Date</label>
+                                    <input type="date" id="tx-date" class="form-control" required>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="tx-payment-mode" data-translate="payment_mode">Payment Mode</label>
+                                    <select id="tx-payment-mode" class="form-control">
+                                        <option value="Bank: CBI" selected>Central Bank of India</option>
+                                        <option value="Bank: JCOM">The Junagadh Commercial Co-Operative Bank Ltd.</option>
+                                        <option value="Cash" data-translate="mode_cash">Cash On Hand</option>
+                                        <option value="FD" data-translate="mode_fd">FD Investment</option>
+                                    </select>
+                                </div>
+
+                                <div class="form-group">
+                                    <label for="tx-ref" data-translate="reference_label">Cheque / Transaction No. (Optional)</label>
+                                    <input type="text" id="tx-ref" class="form-control" placeholder="TXN-10029">
+                                </div>
+
+                                <div class="form-group full-width">
+                                    <label for="tx-desc" data-translate="description_label">Description / Notes</label>
+                                    <textarea id="tx-desc" class="form-control" placeholder="Enter transaction details or comments..."></textarea>
+                                </div>
+                            </div>
+
+                            <div style="display: flex; gap: 12px; margin-top: 24px;">
+                                <button type="submit" id="btn-submit-tx" class="btn btn-primary" data-translate="btn_save">Save Entry</button>
+                                <button type="button" id="btn-cancel-tx" class="btn btn-secondary" data-translate="btn_cancel">Cancel</button>
+                                <button type="button" id="btn-delete-tx" class="btn btn-secondary" style="display: none; background-color: var(--danger-light); color: var(--danger-dark); border-color: var(--danger-light);" data-translate="btn_delete">Delete Entry</button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Bill Scanning Widget -->
+                    <div class="card" style="position: relative; display: flex; flex-direction: column;">
+                        <h3 style="margin-bottom: 12px;" data-translate="action_scan_bill">Scan Bill</h3>
+                        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px;">
+                            Upload an image of a bill or receipt. Our automatic scanner will process it to extract the transaction date, amount, and category, and pre-fill the form automatically.
+                        </p>
+                        
+                        <div class="upload-container" id="upload-droparea">
+                            <!-- Scanner Progress overlay during scanning -->
+                            <div class="scanner-overlay" id="scanner-overlay">
+                                <div class="laser-bar"></div>
+                                <i class="fas fa-microchip" style="font-size: 40px; color: #10b981; animation: pulse 1.5s infinite;"></i>
+                                <div class="scanner-text" id="scanner-text">Processing bill...</div>
+                                <div class="scanner-progress">
+                                    <div class="scanner-progress-bar" id="scanner-progress-bar"></div>
+                                </div>
+                            </div>
+                            
+                            <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                            <span style="font-weight: 600;" data-translate="bill_scan_helper">Drag bill here or click to upload</span>
+                            <span style="font-size: 12px; color: var(--text-muted);">PNG, JPG, JPEG (Max 5MB)</span>
+                            <input type="file" id="tx-file" style="display: none;" accept="image/*">
+                        </div>
+
+                        <!-- Scan preview image -->
+                        <div class="preview-container" id="preview-container">
+                            <button class="remove-preview" id="remove-preview-btn"><i class="fas fa-times"></i></button>
+                            <img id="preview-img" src="" alt="Bill Preview">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 3: REPORTS -->
+            <section id="section-reports" class="page-section">
+                <div class="content-header">
+                    <h1 class="page-title" data-translate="reports_title">Monthly Reports & Statements</h1>
+                    
+                    <!-- Exporters & Print -->
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" id="btn-view-pdf-report">
+                            <i class="fas fa-file-pdf" style="color: #ef4444;"></i> <span>View PDF Report</span>
+                        </button>
+                        <button class="btn btn-secondary" id="btn-print-report" onclick="window.print()">
+                            <i class="fas fa-print"></i> <span data-translate="print_report">Print Report</span>
+                        </button>
+                        <button class="btn btn-success" id="btn-copy-whatsapp" onclick="copyWhatsAppSummary()">
+                            <i class="fab fa-whatsapp"></i> <span data-translate="btn_copy_whatsapp">Copy WhatsApp Text</span>
+                        </button>
+                        <button class="btn btn-primary" id="btn-download-whatsapp" onclick="downloadWhatsAppReportImage()">
+                            <i class="fas fa-image"></i> <span data-translate="btn_download_whatsapp">Download WhatsApp Image</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <!-- Society Logo & Header in Report -->
+                    <div style="display: flex; align-items: center; gap: 16px; margin-bottom: 24px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color);">
+                        <img src="../../brain/225c9f60-c27f-466e-a355-582c6ebd7961/media__1782475273284.jpg" alt="Orchid Heights Logo" id="report-logo" style="width: 55px; height: 55px; object-fit: contain; border-radius: 8px; border: 1px solid var(--border-color); background: #fff; padding: 2px;">
+                        <div>
+                            <h2 style="font-size: 20px; font-weight: 700; color: var(--text-main); margin: 0;" data-translate="report_society_title">Orchid Heights Residency</h2>
+                            <p style="font-size: 13px; color: var(--text-muted); margin: 2px 0 0 0;" id="report-month-title">Monthly Account Statement</p>
+                        </div>
+                    </div>
+
+                    <!-- Search Input Bar -->
+                    <div style="display: flex; flex-direction: column; gap: 16px; margin-bottom: 24px;" class="no-print">
+                        <div class="search-input-wrapper" style="position: relative; display: flex; align-items: center; width: 100%;">
+                            <i class="fas fa-search" style="position: absolute; left: 14px; color: var(--text-muted);"></i>
+                            <input type="text" id="report-search-input" class="form-control" placeholder="કોઈપણ એન્ટ્રી સર્ચ કરો (Search date, category, amount, payment mode, description)..." style="padding-left: 40px; margin-bottom: 0; width: 100%; height: 42px;">
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="filter-row" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 24px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label for="filter-from-date">From Date</label>
+                            <input type="date" id="filter-from-date" class="filter-control">
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label for="filter-to-date">To Date</label>
+                            <input type="date" id="filter-to-date" class="filter-control">
+                        </div>
+
+                        <div style="display: flex; align-items: center; gap: 8px;" class="no-print">
+                            <label for="filter-head">Filter by Head</label>
+                            <select id="filter-head" class="filter-control" style="min-width: 180px;">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                        
+                        <button id="btn-apply-date-filter" class="btn btn-secondary" style="padding: 8px 16px; height: 38px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-filter"></i> Apply Filter
+                        </button>
+                        
+                        <button id="btn-show-cash-setup" class="btn btn-secondary no-print" style="padding: 8px 16px; height: 38px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-wallet"></i> Set Opening Cash
+                        </button>
+
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;" class="no-print">
+                            <button id="btn-print-cash-ledger" class="btn btn-secondary" style="padding: 8px 16px; height: 38px; display: flex; align-items: center; gap: 6px;" onclick="printLedger('ledger_cash')">
+                                <i class="fas fa-print"></i> Print Cash Ledger
+                            </button>
+                            <button id="btn-print-cbi-ledger" class="btn btn-secondary" style="padding: 8px 16px; height: 38px; display: flex; align-items: center; gap: 6px;" onclick="printLedger('ledger_bank_cbi')">
+                                <i class="fas fa-print"></i> Print CBI Bank Ledger
+                            </button>
+                            <button id="btn-print-jcom-ledger" class="btn btn-secondary" style="padding: 8px 16px; height: 38px; display: flex; align-items: center; gap: 6px;" onclick="printLedger('ledger_bank_jcom')">
+                                <i class="fas fa-print"></i> Print JCOM Bank Ledger
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Mini Month Statistics Summary banner -->
+                    <div class="summary-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 24px; gap: 12px;">
+                        <div class="card" style="padding: 16px; text-align: center; border-radius: 8px;">
+                            <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;" data-translate="total_income">Total Income</span>
+                            <div style="font-size: 20px; font-weight: 700; color: var(--success); margin-top: 4px;" id="rep-total-income">₹ 0</div>
+                        </div>
+                        <div class="card" style="padding: 16px; text-align: center; border-radius: 8px;">
+                            <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;" data-translate="total_expense">Total Expense</span>
+                            <div style="font-size: 20px; font-weight: 700; color: var(--danger); margin-top: 4px;" id="rep-total-expense">₹ 0</div>
+                        </div>
+                        <div class="card" style="padding: 16px; text-align: center; border-radius: 8px;">
+                            <span style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;" data-translate="net_savings">Net Savings</span>
+                            <div style="font-size: 20px; font-weight: 700; margin-top: 4px;" id="rep-net-savings">₹ 0</div>
+                        </div>
+                    </div>
+
+                    <!-- Main Report Table -->
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 16px;">
+                        <h4 data-translate="recent_transactions">Transaction Details</h4>
+                        <span style="font-size: 12px; color: var(--primary); font-weight: 600;"><i class="fas fa-info-circle"></i> Click row to edit transaction entry</span>
+                    </div>
+                    
+                    <div class="table-responsive">
+                        <table style="width: 100%;">
+                            <thead>
+                                <tr id="reports-table-header-row">
+                                    <th data-translate="col_date">Date</th>
+                                    <th data-translate="col_type">Type</th>
+                                    <th data-translate="col_head">Account Head</th>
+                                    <th data-translate="col_amount">Amount</th>
+                                    <th data-translate="col_mode">Mode</th>
+                                    <th data-translate="col_desc">Description / Notes</th>
+                                    <th>Cash Bal</th>
+                                    <th>CBI Bal</th>
+                                    <th>JCOM Bal</th>
+                                    <th style="text-align: center;" data-translate="col_bill">Bill File</th>
+                                </tr>
+                            </thead>
+                            <tbody id="reports-table-body">
+                                <!-- Loaded dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                    
+                    <div id="no-transactions-alert" style="display: none; padding: 40px 20px; text-align: center; color: var(--text-muted);" data-translate="no_transactions">
+                        No transactions recorded in this month.
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 4: BALANCE SHEET -->
+            <section id="section-balance" class="page-section">
+                <div class="content-header">
+                    <h1 class="page-title" data-translate="balance_title">Year-End Balance Sheet</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" id="print-balance-sheet">
+                            <i class="fas fa-print"></i> <span data-translate="print_sheet">Print Balance Sheet</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="balance-sheet-container">
+                    
+                    <!-- Print header metadata -->
+                    <div class="print-header">
+                        <img src="../../brain/225c9f60-c27f-466e-a355-582c6ebd7961/media__1782475273284.jpg" alt="Orchid Heights Logo" id="balance-logo">
+                        <div class="print-header-text">
+                            <h2 data-translate="balance_society_title">ORCHID HEIGHTS RESIDENCY</h2>
+                            <h3 data-translate="balance_society_subtitle">Year-End Balance Sheet & Financial Statements</h3>
+                            <p id="balance-period-title">Financial Year: 2026-27 (01-04-2026 to 31-03-2027)</p>
+                        </div>
+                    </div>
+
+                    <!-- Filters for Balance Sheet -->
+                    <div class="filter-row no-print" style="display: flex; gap: 16px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; border-bottom: 1px solid var(--border-color); padding-bottom: 16px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label for="balance-from-date">From Date</label>
+                            <input type="date" id="balance-from-date" class="filter-control">
+                        </div>
+                        
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <label for="balance-to-date">To Date</label>
+                            <input type="date" id="balance-to-date" class="filter-control">
+                        </div>
+                        
+                        <button id="btn-apply-balance-filter" class="btn btn-secondary" style="padding: 8px 16px; height: 38px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fas fa-filter"></i> Apply Filter
+                        </button>
+                    </div>
+
+                    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px;" class="no-print">
+                        <div>
+                            <span>Report Period</span>: <strong id="balance-screen-period">01-04-2026 to 31-03-2027</strong>
+                        </div>
+                        <div id="tally-indicator">
+                            <!-- Tallied message loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <div class="balance-sheet-grid">
+                        
+                        <!-- Liabilities Side -->
+                        <div>
+                            <div class="balance-sheet-section-title">
+                                <span data-translate="liabilities">Liabilities & Funds</span>
+                                <span data-translate="col_amount">Amount</span>
+                            </div>
+                            
+                            <table class="balance-sheet-table">
+                                <tbody id="liab-table-body">
+                                    <!-- Loaded by JS -->
+                                </tbody>
+                            </table>
+                            
+                            <table class="balance-sheet-table" style="margin-top: auto;">
+                                <tr class="total-row">
+                                    <td data-translate="total">Total</td>
+                                    <td style="text-align: right;" id="liab-total">₹ 0</td>
+                                </tr>
+                            </table>
+                        </div>
+
+                        <!-- Assets Side -->
+                        <div>
+                            <div class="balance-sheet-section-title">
+                                <span data-translate="assets">Assets & Receivables</span>
+                                <span data-translate="col_amount">Amount</span>
+                            </div>
+                            
+                            <table class="balance-sheet-table">
+                                <tbody id="assets-table-body">
+                                    <!-- Loaded by JS -->
+                                </tbody>
+                            </table>
+                            
+                            <table class="balance-sheet-table">
+                                <tr class="total-row">
+                                    <td data-translate="total">Total</td>
+                                    <td style="text-align: right;" id="assets-total">₹ 0</td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Detailed Category Breakdown (Income & Expense Ledger Totals) -->
+                    <div class="balance-sheet-details-section">
+                        <h3 class="details-section-title">
+                            Detailed Income & Expenditure Statement (Category Wise)
+                        </h3>
+                        <div class="balance-sheet-grid">
+                            <!-- Income Heads Total -->
+                            <div>
+                                <div class="balance-sheet-section-title category-title-income">
+                                    <span>Income Categories</span>
+                                    <span>Total Amount</span>
+                                </div>
+                                <table class="balance-sheet-table">
+                                    <tbody id="detailed-income-heads-tbody">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- Expense Heads Total -->
+                            <div>
+                                <div class="balance-sheet-section-title category-title-expense">
+                                    <span>Expense Categories</span>
+                                    <span>Total Amount</span>
+                                </div>
+                                <table class="balance-sheet-table">
+                                    <tbody id="detailed-expense-heads-tbody">
+                                        <!-- Populated dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Chronological Transaction Register (General Ledger) -->
+                    <div class="balance-sheet-ledger-section">
+                        <h3 class="details-section-title">
+                            Detailed Transaction Register (All Entries)
+                        </h3>
+                        <div class="table-responsive">
+                            <table style="width: 100%;">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Type</th>
+                                        <th>Account Head</th>
+                                        <th>Amount</th>
+                                        <th>Mode</th>
+                                        <th>Description / Reference</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="balance-sheet-ledger-tbody">
+                                    <!-- Populated dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opening Balances config panel -->
+                <div class="card no-print" style="margin-top: 24px;">
+                    <h3 style="margin-bottom: 16px;" data-translate="opening_title">Opening Balance Setup (01-April 2026)</h3>
+                    <form id="opening-balances-form">
+                        <div class="form-grid" style="grid-template-columns: repeat(4, 1fr);">
+                            <div class="form-group">
+                                <label for="op-cash">Set Cash (Cash in Hand)</label>
+                                <input type="number" id="op-cash" class="form-control" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="op-bank-cbi">Set CBI Bank Balance</label>
+                                <input type="number" id="op-bank-cbi" class="form-control" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="op-bank-jcom">Set JCOM Bank Balance</label>
+                                <input type="number" id="op-bank-jcom" class="form-control" value="0">
+                            </div>
+                            <div class="form-group">
+                                <label for="op-fd">Set Fixed Deposit (FD)</label>
+                                <input type="number" id="op-fd" class="form-control" value="0">
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-secondary" style="margin-top: 16px;" data-translate="btn_update">Update Balances</button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- SECTION 5: ACCOUNT HEADS SETUP -->
+            <section id="section-heads" class="page-section">
+                <div class="content-header">
+                    <h1 class="page-title" data-translate="heads_title">Income & Expense Heads Management</h1>
+                </div>
+
+                <div class="category-manager-grid">
+                    
+                    <!-- Add Category Head Form -->
+                    <div class="card" style="height: fit-content;">
+                        <h3 style="margin-bottom: 16px;">Add New Category</h3>
+                        <form id="head-form">
+                            <div class="form-group" style="margin-bottom: 14px;">
+                                <label for="head-type">Category Type</label>
+                                <select id="head-type" class="form-control">
+                                    <option value="expense" selected>Expense</option>
+                                    <option value="income">Income</option>
+                                </select>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 14px;">
+                                <label for="head-name-en">Category Name (English)</label>
+                                <input type="text" id="head-name-en" class="form-control" placeholder="e.g. Security Salary" required>
+                            </div>
+
+                            <div class="form-group" style="margin-bottom: 20px;">
+                                <label for="head-color" data-translate="head_color">Color Code</label>
+                                <input type="color" id="head-color" class="form-control" style="height: 45px; padding: 4px;" value="#ec407a">
+                            </div>
+
+                            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;" data-translate="btn_add_head">Add Category Head</button>
+                        </form>
+                    </div>
+
+                    <!-- Category Lists Display -->
+                    <div style="display: flex; flex-direction: column; gap: 24px;">
+                        
+                        <!-- Income Heads Card -->
+                        <div class="card">
+                            <h3 data-translate="income_heads_list">Income Heads List</h3>
+                            <div class="category-list" id="income-heads-list">
+                                <!-- Loaded dynamically -->
+                            </div>
+                        </div>
+
+                        <!-- Expense Heads Card -->
+                        <div class="card">
+                            <h3 data-translate="expense_heads_list">Expense Heads List</h3>
+                            <div class="category-list" id="expense-heads-list">
+                                <!-- Loaded dynamically -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION 6: BACKUP & RESTORE -->
+            <section id="section-backup" class="page-section">
+                <div class="content-header">
+                    <h1 class="page-title" data-translate="backup_title">Excel Data Backup & Restore</h1>
+                </div>
+
+                <div class="four-column-grid">
+                    
+                    <!-- General Excel Importer -->
+                    <div class="card" style="height: fit-content; text-align: center; padding: 40px 24px; border-color: rgba(16, 185, 129, 0.4);">
+                        <i class="fas fa-file-excel" style="font-size: 56px; color: var(--success); margin-bottom: 20px;"></i>
+                        <h3 style="margin-bottom: 12px;">General Excel Import</h3>
+                        <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 24px;">
+                            તમારી સોસાયટીના હિસાબની એક્સેલ ફાઇલ અપલોડ કરો. ખાતાના હેડ (heads) અને વ્યવહાર એન્ટ્રીઓ આપમેળે ઇમ્પોર્ટ થશે.
+                        </p>
+                        <input type="file" id="general-excel-file" class="form-control" accept=".xlsx, .xls" required style="margin-bottom: 16px;">
+                        <button type="button" class="btn btn-success" style="width: 100%; justify-content: center; background-color: var(--success);" id="btn-import-general-excel">
+                            <i class="fas fa-upload"></i> General Excel Upload
+                        </button>
+                    </div>
+
+                    <!-- Member deposits import -->
+                    <div class="card" style="height: fit-content; text-align: center; padding: 40px 24px;">
+                        <i class="fas fa-users" style="font-size: 56px; color: var(--primary); margin-bottom: 20px;"></i>
+                        <h3 style="margin-bottom: 12px;">Import Member Deposits</h3>
+                        <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 24px;">
+                            Upload the society's member deposits Excel sheet (`Orchid_Heights_Accounts_2026_06 (JUNE - JULY).xlsx`) to automatically record maintenance deposits.
+                        </p>
+                        <input type="file" id="member-deposits-file" class="form-control" accept=".xlsx, .xls" required style="margin-bottom: 16px;">
+                        <button type="button" class="btn btn-primary" style="width: 100%; justify-content: center;" id="btn-import-member-deposits">
+                            <i class="fas fa-file-excel"></i> Import Member Deposits
+                        </button>
+                    </div>
+
+                    <!-- Backup download -->
+                    <div class="card" style="height: fit-content; text-align: center; padding: 40px 24px;">
+                        <i class="fas fa-file-excel" style="font-size: 56px; color: #10b981; margin-bottom: 20px;"></i>
+                        <h3 style="margin-bottom: 12px;">Export Excel Backup</h3>
+                        <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 24px;">
+                            Download all transaction entries and account categories as a Microsoft Excel (.xlsx) spreadsheet for local storage, audits, or analysis.
+                        </p>
+                        <button class="btn btn-success" style="width: 100%; justify-content: center; background-color: #10b981;" id="btn-export-backup">
+                            <i class="fas fa-file-download"></i> Download Excel Backup (.xlsx)
+                        </button>
+                    </div>
+
+                    <!-- Backup restore upload -->
+                    <div class="card" style="height: fit-content; text-align: center; padding: 40px 24px;">
+                        <i class="fas fa-file-import" style="font-size: 56px; color: var(--primary); margin-bottom: 20px;"></i>
+                        <h3 style="margin-bottom: 12px;">Import Excel Upload</h3>
+                        <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 24px;">
+                            Restore your accounting data by uploading an Excel backup spreadsheet (.xlsx or .xls). Warning: This will overwrite your current local database.
+                        </p>
+                        <form id="backup-import-form">
+                            <input type="file" id="backup-file-input" class="form-control" accept=".xlsx, .xls" required style="margin-bottom: 16px;">
+                            <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">
+                                <i class="fas fa-file-excel"></i> Restore Excel Upload (.xlsx)
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Logo Setup Card -->
+                    <div class="card" style="height: fit-content; text-align: center; padding: 40px 24px;">
+                        <i class="fas fa-image" style="font-size: 56px; color: var(--primary); margin-bottom: 20px;"></i>
+                        <h3 style="margin-bottom: 12px;">Society Logo Setup</h3>
+                        <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 24px;">
+                            Upload the society logo (.png or .jpg) to display it on the downloaded WhatsApp report card.
+                        </p>
+                        <div id="logo-status-container" style="margin-bottom: 16px; font-size: 13px; font-weight: 600; min-height: 20px;">
+                            <!-- Loaded by JS -->
+                        </div>
+                        <input type="file" id="logo-file-input" class="form-control" accept="image/*" style="display: none;">
+                        <button type="button" class="btn btn-primary" style="width: 100%; justify-content: center;" id="btn-upload-logo">
+                            <i class="fas fa-upload"></i> Upload Logo
+                        </button>
+                    </div>
+
+                    <!-- Delete All Entries -->
+                    <div class="card" style="height: fit-content; text-align: center; padding: 40px 24px; border-color: rgba(239, 68, 68, 0.4);">
+                        <i class="fas fa-trash-alt" style="font-size: 56px; color: var(--danger); margin-bottom: 20px;"></i>
+                        <h3 style="margin-bottom: 12px;">Clear All Transactions</h3>
+                        <p style="font-size: 14px; color: var(--text-muted); margin-bottom: 24px;">
+                            Permanently delete all society income and expense transactions. Warning: This action is irreversible and cannot be undone.
+                        </p>
+                        <button class="btn btn-secondary" style="width: 100%; justify-content: center; background-color: var(--danger); color: white; border: none;" id="btn-clear-all-tx">
+                            <i class="fas fa-exclamation-triangle"></i> Clear All Transactions
+                        </button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- MODAL 1: TRANSACTION EDIT POPUP -->
+    <div class="modal-overlay" id="edit-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title" data-translate="edit_entry">Edit Entry</h3>
+                <button class="close-modal" id="edit-modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-tx-form">
+                    <input type="hidden" id="edit-tx-id">
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="edit-tx-type" data-translate="entry_type">Transaction Type</label>
+                            <select id="edit-tx-type" class="form-control">
+                                <option value="expense" data-translate="type_expense">Expense</option>
+                                <option value="income" data-translate="type_income">Income</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit-tx-head" data-translate="select_head">Account Head</label>
+                            <select id="edit-tx-head" class="form-control" required>
+                                <!-- Loaded by JS -->
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit-tx-amount" data-translate="amount_label">Amount (₹)</label>
+                            <input type="number" id="edit-tx-amount" class="form-control" required min="1" step="any">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit-tx-date" data-translate="date_label">Date</label>
+                            <input type="date" id="edit-tx-date" class="form-control" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit-tx-payment-mode" data-translate="payment_mode">Payment Mode</label>
+                            <select id="edit-tx-payment-mode" class="form-control">
+                                <option value="Bank: CBI">Central Bank of India</option>
+                                <option value="Bank: JCOM">The Junagadh Commercial Co-Operative Bank Ltd.</option>
+                                <option value="Cash" data-translate="mode_cash">Cash On Hand</option>
+                                <option value="FD" data-translate="mode_fd">FD Investment</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="edit-tx-ref" data-translate="reference_label">Cheque / Transaction No.</label>
+                            <input type="text" id="edit-tx-ref" class="form-control">
+                        </div>
+
+                        <div class="form-group full-width">
+                            <label for="edit-tx-desc" data-translate="description_label">Description / Notes</label>
+                            <textarea id="edit-tx-desc" class="form-control"></textarea>
+                        </div>
+                    </div>
+
+                    <!-- Bill image preview in edit mode -->
+                    <div class="preview-container" id="edit-preview-container" style="max-height: 180px; margin-top: 16px;">
+                        <img id="edit-preview-img" src="" alt="Bill Preview">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" style="background-color: var(--danger-light); color: var(--danger-dark); border-color: var(--danger-light); margin-right: auto;" id="edit-modal-delete">
+                    <i class="fas fa-trash-alt"></i> <span data-translate="btn_delete">Delete Entry</span>
+                </button>
+                <button type="submit" form="edit-tx-form" class="btn btn-primary" data-translate="btn_update">Update & Save</button>
+                <button type="button" class="btn btn-secondary" id="edit-modal-cancel" data-translate="btn_cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: BILL VIEWER -->
+    <div class="modal-overlay" id="bill-viewer-modal">
+        <div class="modal-content" style="max-width: 600px; max-height: 85vh;">
+            <div class="modal-header">
+                <h3 class="modal-title" data-translate="col_bill">Bill File Viewer</h3>
+                <button class="close-modal" id="bill-viewer-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="background-color: #1e293b; display: flex; align-items: center; justify-content: center; padding: 12px; height: 450px;">
+                <img id="viewer-img" src="" alt="Bill Receipt View" style="max-width: 100%; max-height: 100%; object-fit: contain; box-shadow: 0 4px 10px rgba(0,0,0,0.5);">
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 3: CATEGORY EDIT POPUP -->
+    <div class="modal-overlay" id="category-edit-modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Edit Category</h3>
+                <button class="close-modal" id="cat-edit-modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body">
+                <form id="cat-edit-form">
+                    <input type="hidden" id="edit-cat-id">
+                    <input type="hidden" id="edit-cat-type">
+                    
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label for="edit-cat-name">Category Name (English)</label>
+                        <input type="text" id="edit-cat-name" class="form-control" required>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label for="edit-cat-color">Color Code</label>
+                        <input type="color" id="edit-cat-color" class="form-control" style="height: 45px; padding: 4px;">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" form="cat-edit-form" class="btn btn-primary">Update Category</button>
+                <button type="button" class="btn btn-secondary" id="cat-edit-modal-cancel">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 4: OPENING CASH SETUP -->
+    <div class="modal-overlay" id="opening-cash-modal">
+        <div class="modal-content" style="max-width: 420px;">
+            <div class="modal-header">
+                <h3 class="modal-title">Society Cash Setup</h3>
+                <button class="close-modal" id="opening-cash-modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="opening-cash-setup-form">
+                <div class="modal-body">
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                        Welcome to Orchid Heights residency accounts! Please enter your society's starting Cash on Hand to initialize bookkeeping.
+                    </p>
+                    <div class="form-group">
+                        <label for="setup-cash-input">Starting Cash on Hand (રોકડ સિલક)</label>
+                        <input type="number" id="setup-cash-input" class="form-control" placeholder="e.g. 30300" required min="0" step="any">
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding-top: 0; border-top: none;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Save & Start Accounting</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 4: PDF VIEWER -->
+    <div class="modal-overlay" id="pdf-viewer-modal">
+        <div class="modal-content" style="max-width: 950px; width: 95%; height: 90vh; display: flex; flex-direction: column;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-file-pdf" style="color: #ef4444; margin-right: 8px;"></i>PDF Report Preview</h3>
+                <button class="close-modal" id="pdf-viewer-close"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="modal-body" style="flex-grow: 1; padding: 0; position: relative; height: calc(90vh - 70px); background: #525659;">
+                <iframe id="pdf-viewer-iframe" style="width: 100%; height: 100%; border: none;"></iframe>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 5: DATE RANGE PROMPT -->
+    <div class="modal-overlay" id="date-prompt-modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-calendar-alt" style="color: var(--primary); margin-right: 8px;"></i>અહેવાલ તારીખ ગાળો (Date Range Query)</h3>
+                <button class="close-modal" id="date-prompt-modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="date-prompt-setup-form">
+                <div class="modal-body">
+                    <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                        રિપોર્ટિંગમાં કઈ તારીખ થી કઈ તારીખ સુધીની વિગતો જોઈએ છે તે પસંદ કરો:
+                    </p>
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+                        <div class="form-group">
+                            <label for="prompt-from-date">શરૂઆતની તારીખ</label>
+                            <input type="date" id="prompt-from-date" class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="prompt-to-date">અંતિમ તારીખ</label>
+                            <input type="date" id="prompt-to-date" class="form-control" required>
+                        </div>
+                    </div>
+                    <div class="quick-dates-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 8px;">
+                        <button type="button" class="btn btn-secondary px-2 py-1" style="font-size: 11px; justify-content: center; background-color: var(--bg-app);" onclick="setPromptQuickDates('this_month')">આ માસ (This Month)</button>
+                        <button type="button" class="btn btn-secondary px-2 py-1" style="font-size: 11px; justify-content: center; background-color: var(--bg-app);" onclick="setPromptQuickDates('last_month')">ગયો માસ (Last Month)</button>
+                        <button type="button" class="btn btn-secondary px-2 py-1" style="font-size: 11px; justify-content: center; background-color: var(--bg-app);" onclick="setPromptQuickDates('fy_2026')">FY 2026-27</button>
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding-top: 0; border-top: none;">
+                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">અહેવાલ જુઓ (View Report)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL 6: EXCEL COLUMN MAPPER -->
+    <div class="modal-overlay" id="excel-mapper-modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-table" style="color: var(--success); margin-right: 8px;"></i>Excel કોલમ મેપિંગ (Map Columns)</h3>
+                <button class="close-modal" id="excel-mapper-modal-close"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="excel-mapper-setup-form">
+                <div class="modal-body">
+                    <p style="font-size: 13.5px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5;">
+                        Excel ફાઇલમાંથી સાચો ડેટા વાંચવા માટે કૃપા કરીને નીચેની વિગતો કઈ કોલમમાં છે તે દર્શાવો.
+                    </p>
+                    <div class="form-grid" style="grid-template-columns: 1fr; gap: 12px; margin-bottom: 16px;" id="mapper-selects-container">
+                        <!-- Dropdowns populated by JS -->
+                    </div>
+                </div>
+                <div class="modal-footer" style="padding-top: 0; border-top: none;">
+                    <button type="submit" class="btn btn-success" style="width: 100%; justify-content: center; background-color: var(--success); color: white; border: none;">ડેટા ઇમ્પોર્ટ કરો (Import Data)</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TOAST NOTIFICATION CONTAINER -->
+    <div class="toast-notification" id="toast">
+        <i class="toast-icon fas fa-check-circle" id="toast-icon"></i>
+        <span id="toast-text">Entry saved successfully!</span>
+    </div>
+
+    <!-- Application Script bindings -->
+    <script src="js/data.js"></script>
+    <script src="js/ocr.js"></script>
+    <script src="js/canvas-export.js"></script>
+    <script src="js/app.js"></script>
+
+</body>
+</html>

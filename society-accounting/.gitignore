@@ -1,0 +1,4 @@
+# Temporary Excel files
+temp_orchid.xlsx
+*.tmp
+*.log

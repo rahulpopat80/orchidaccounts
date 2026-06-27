@@ -1,0 +1,5 @@
+# Temporary Excel or log files
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
