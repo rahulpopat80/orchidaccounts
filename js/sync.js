@@ -4,9 +4,7 @@ class CloudSyncManager {
     constructor() {
         this.firebaseApp = null;
         this.firestore = null;
-        this.auth = null;
         this.active = false;
-        this.uid = null;
         this.config = null;
         this.listeners = [];
         this.isOnline = navigator.onLine;
@@ -18,7 +16,7 @@ class CloudSyncManager {
     }
 
     init() {
-        // Default built-in Firebase config
+        // Default built-in Firebase config provided by the user
         const DEFAULT_CONFIG = {
             apiKey: "AIzaSyDF826FrHNrbiUfk55L0QLUl2NYZmFQJcs",
             authDomain: "orchidaccountings.firebaseapp.com",
@@ -36,6 +34,7 @@ class CloudSyncManager {
             }
         }
         
+        // Use default config if none is stored
         if (!this.config) {
             this.config = DEFAULT_CONFIG;
         }
@@ -60,7 +59,6 @@ class CloudSyncManager {
         this.isOnline = online;
         this.updateBadge();
         if (online && this.active) {
-            // Re-sync network state in firestore if needed
             if (this.firestore) {
                 this.firestore.enableNetwork().catch(err => console.error("Error enabling firestore network", err));
             }
@@ -69,13 +67,12 @@ class CloudSyncManager {
 
     initializeFirebase(config) {
         try {
-            // If another app instance exists, delete it first
+            // Delete existing app if any
             if (firebase.apps.length > 0) {
-                // Return if already initialized with same config
                 if (this.config && this.config.projectId === config.projectId && this.firebaseApp) {
+                    this.onConnectionActive();
                     return true;
                 }
-                // Otherwise delete existing apps
                 firebase.apps.forEach(app => app.delete());
             }
 
@@ -98,38 +95,24 @@ class CloudSyncManager {
                 }
             });
 
-            this.auth = firebase.auth();
             this.config = config;
             localStorage.setItem("orchid_firebase_config", JSON.stringify(config));
 
-            // Set up Auth state observer
-            this.auth.onAuthStateChanged(user => {
-                if (user) {
-                    this.onUserLogin(user);
-                } else {
-                    this.onUserLogout();
-                }
-            });
-
+            this.onConnectionActive();
             return true;
         } catch (e) {
             console.error("Firebase Initialization Failed", e);
             showToast("Failed to initialize Firebase! Check config.", true);
+            this.active = false;
             this.updateBadge();
             return false;
         }
     }
 
-    onUserLogin(user) {
+    onConnectionActive() {
         this.active = true;
-        this.uid = user.uid;
         this.updateBadge();
         this.showSetupStep("active");
-        
-        const userDisplay = document.getElementById("cloud-sync-user-display");
-        if (userDisplay) {
-            userDisplay.innerText = `Logged in as: ${user.email}`;
-        }
         
         const projectDisplay = document.getElementById("cloud-active-project-id");
         if (projectDisplay) {
@@ -143,23 +126,23 @@ class CloudSyncManager {
         this.setupRealtimeListeners();
     }
 
-    onUserLogout() {
+    onDisconnect() {
         this.active = false;
-        this.uid = null;
+        this.config = null;
+        localStorage.removeItem("orchid_firebase_config");
         this.detachListeners();
         this.updateBadge();
-        this.showSetupStep("step-2");
+        this.showSetupStep("step-1");
+        showToast("Disconnected from cloud sync. Reverted to local mode.");
     }
 
     setupRealtimeListeners() {
         this.detachListeners();
 
-        if (!this.active || !this.firestore || !this.uid) return;
-
-        const uid = this.uid;
+        if (!this.active || !this.firestore) return;
         
         // 1. Transactions Listener
-        const txListener = this.firestore.collection(`users/${uid}/transactions`)
+        const txListener = this.firestore.collection("transactions")
             .onSnapshot(snapshot => {
                 this.handleRemoteTransactionsUpdate(snapshot);
             }, err => {
@@ -169,7 +152,7 @@ class CloudSyncManager {
         this.listeners.push(txListener);
 
         // 2. Opening Balances Listener
-        const opListener = this.firestore.doc(`users/${uid}/opening_balances/data`)
+        const opListener = this.firestore.doc("opening_balances/data")
             .onSnapshot(doc => {
                 if (doc.exists) {
                     this.handleRemoteOpeningBalancesUpdate(doc.data());
@@ -180,7 +163,7 @@ class CloudSyncManager {
         this.listeners.push(opListener);
 
         // 3. Income Heads Listener
-        const incListener = this.firestore.collection(`users/${uid}/income_heads`)
+        const incListener = this.firestore.collection("income_heads")
             .onSnapshot(snapshot => {
                 this.handleRemoteCategoriesUpdate("income", snapshot);
             }, err => {
@@ -189,7 +172,7 @@ class CloudSyncManager {
         this.listeners.push(incListener);
 
         // 4. Expense Heads Listener
-        const expListener = this.firestore.collection(`users/${uid}/expense_heads`)
+        const expListener = this.firestore.collection("expense_heads")
             .onSnapshot(snapshot => {
                 this.handleRemoteCategoriesUpdate("expense", snapshot);
             }, err => {
@@ -282,61 +265,59 @@ class CloudSyncManager {
     // Refresh active tab views
     refreshActiveUI() {
         if (typeof switchTab === "function") {
-            // Trigger tab load handlers to refresh page elements
             switchTab(state.activeTab);
         }
     }
 
     // Write-through local modifications to Firestore
     uploadTransaction(tx) {
-        if (!this.active || !this.firestore || !this.uid) return;
+        if (!this.active || !this.firestore) return;
         const txCopy = { ...tx };
-        delete txCopy.id; // ID will be document key
+        delete txCopy.id;
 
-        this.firestore.doc(`users/${this.uid}/transactions/${tx.id}`)
+        this.firestore.doc(`transactions/${tx.id}`)
             .set(txCopy)
             .catch(err => console.error("Sync Error uploading transaction", err));
     }
 
     deleteTransaction(txId) {
-        if (!this.active || !this.firestore || !this.uid) return;
-        this.firestore.doc(`users/${this.uid}/transactions/${txId}`)
+        if (!this.active || !this.firestore) return;
+        this.firestore.doc(`transactions/${txId}`)
             .delete()
             .catch(err => console.error("Sync Error deleting transaction", err));
     }
 
     uploadOpeningBalances(balances) {
-        if (!this.active || !this.firestore || !this.uid) return;
-        this.firestore.doc(`users/${this.uid}/opening_balances/data`)
+        if (!this.active || !this.firestore) return;
+        this.firestore.doc("opening_balances/data")
             .set(balances)
             .catch(err => console.error("Sync Error uploading opening balances", err));
     }
 
     uploadCategory(type, head) {
-        if (!this.active || !this.firestore || !this.uid) return;
+        if (!this.active || !this.firestore) return;
         const headCopy = { ...head };
         delete headCopy.id;
 
         const path = type === "income" ? "income_heads" : "expense_heads";
-        this.firestore.doc(`users/${this.uid}/${path}/${head.id}`)
+        this.firestore.doc(`${path}/${head.id}`)
             .set(headCopy)
             .catch(err => console.error(`Sync Error uploading category ${type}`, err));
     }
 
     deleteCategory(type, headId) {
-        if (!this.active || !this.firestore || !this.uid) return;
+        if (!this.active || !this.firestore) return;
         const path = type === "income" ? "income_heads" : "expense_heads";
-        this.firestore.doc(`users/${this.uid}/${path}/${headId}`)
+        this.firestore.doc(`${path}/${headId}`)
             .delete()
             .catch(err => console.error(`Sync Error deleting category ${type}`, err));
     }
 
     async syncFullTransactions(transactions) {
-        if (!this.active || !this.firestore || !this.uid) return;
+        if (!this.active || !this.firestore) return;
         
         try {
-            const uid = this.uid;
-            const snapshot = await this.firestore.collection(`users/${uid}/transactions`).get();
+            const snapshot = await this.firestore.collection("transactions").get();
             const remoteDocIds = [];
             snapshot.forEach(doc => {
                 remoteDocIds.push(doc.id);
@@ -349,7 +330,7 @@ class CloudSyncManager {
 
             for (const id of remoteDocIds) {
                 if (!localIds.has(id)) {
-                    batch.delete(this.firestore.doc(`users/${uid}/transactions/${id}`));
+                    batch.delete(this.firestore.doc(`transactions/${id}`));
                     operations++;
                     if (operations >= batchLimit) {
                         await batch.commit();
@@ -363,7 +344,7 @@ class CloudSyncManager {
                 const txCopy = { ...tx };
                 delete txCopy.id;
                 
-                batch.set(this.firestore.doc(`users/${uid}/transactions/${tx.id}`), txCopy);
+                batch.set(this.firestore.doc(`transactions/${tx.id}`), txCopy);
                 operations++;
                 if (operations >= batchLimit) {
                     await batch.commit();
@@ -383,13 +364,11 @@ class CloudSyncManager {
     }
 
     async syncFullCategories(type, heads) {
-        if (!this.active || !this.firestore || !this.uid) return;
+        if (!this.active || !this.firestore) return;
         
         try {
-            const uid = this.uid;
             const path = type === "income" ? "income_heads" : "expense_heads";
-            
-            const snapshot = await this.firestore.collection(`users/${uid}/${path}`).get();
+            const snapshot = await this.firestore.collection(path).get();
             const remoteDocIds = [];
             snapshot.forEach(doc => {
                 remoteDocIds.push(doc.id);
@@ -402,7 +381,7 @@ class CloudSyncManager {
 
             for (const id of remoteDocIds) {
                 if (!localIds.has(id)) {
-                    batch.delete(this.firestore.doc(`users/${uid}/${path}/${id}`));
+                    batch.delete(this.firestore.doc(`${path}/${id}`));
                     operations++;
                     if (operations >= batchLimit) {
                         await batch.commit();
@@ -416,7 +395,7 @@ class CloudSyncManager {
                 const headCopy = { ...head };
                 delete headCopy.id;
                 
-                batch.set(this.firestore.doc(`users/${uid}/${path}/${head.id}`), headCopy);
+                batch.set(this.firestore.doc(`${path}/${head.id}`), headCopy);
                 operations++;
                 if (operations >= batchLimit) {
                     await batch.commit();
@@ -437,25 +416,24 @@ class CloudSyncManager {
 
     // Upload local storage database to cloud if remote database is brand new (empty)
     async checkAndInitializeRemoteData() {
-        if (!this.active || !this.firestore || !this.uid) return;
+        if (!this.active || !this.firestore) return;
         
         try {
-            const uid = this.uid;
-            const opDoc = await this.firestore.doc(`users/${uid}/opening_balances/data`).get();
+            const opDoc = await this.firestore.doc("opening_balances/data").get();
             
             if (!opDoc.exists) {
                 console.log("Sync: Remote database is empty, uploading current local data...");
                 
                 // 1. Upload Opening Balances
                 const localBalances = db.getOpeningBalances();
-                await this.firestore.doc(`users/${uid}/opening_balances/data`).set(localBalances);
+                await this.firestore.doc("opening_balances/data").set(localBalances);
 
                 // 2. Upload Income Categories
                 const localIncome = db.getIncomeHeads();
                 for (const head of localIncome) {
                     const copy = { ...head };
                     delete copy.id;
-                    await this.firestore.doc(`users/${uid}/income_heads/${head.id}`).set(copy);
+                    await this.firestore.doc(`income_heads/${head.id}`).set(copy);
                 }
 
                 // 3. Upload Expense Categories
@@ -463,12 +441,11 @@ class CloudSyncManager {
                 for (const head of localExpense) {
                     const copy = { ...head };
                     delete copy.id;
-                    await this.firestore.doc(`users/${uid}/expense_heads/${head.id}`).set(copy);
+                    await this.firestore.doc(`expense_heads/${head.id}`).set(copy);
                 }
 
                 // 4. Upload Transactions
                 const localTxs = db.getTransactions();
-                // To avoid rate limits, upload in small sequential batches or promises
                 const batchLimit = 20;
                 let currentBatch = this.firestore.batch();
                 let operations = 0;
@@ -478,7 +455,7 @@ class CloudSyncManager {
                     const copy = { ...tx };
                     delete copy.id;
                     
-                    const docRef = this.firestore.doc(`users/${uid}/transactions/${tx.id}`);
+                    const docRef = this.firestore.doc(`transactions/${tx.id}`);
                     currentBatch.set(docRef, copy);
                     operations++;
 
@@ -524,7 +501,7 @@ class CloudSyncManager {
             } else if (!this.active) {
                 badge.className = "sync-badge offline";
                 dot.style.background = "#94a3b8";
-                text.innerText = "Configured / Signed Out";
+                text.innerText = "Offline Mode";
             } else if (!this.isOnline) {
                 badge.className = "sync-badge offline";
                 dot.style.background = "#f59e0b";
@@ -543,11 +520,9 @@ class CloudSyncManager {
 
     showSetupStep(stepId) {
         const step1 = document.getElementById("cloud-sync-setup-step-1");
-        const step2 = document.getElementById("cloud-sync-setup-step-2");
         const stepActive = document.getElementById("cloud-sync-setup-step-active");
 
         if (step1) step1.style.display = stepId === "step-1" ? "block" : "none";
-        if (step2) step2.style.display = stepId === "step-2" ? "block" : "none";
         if (stepActive) stepActive.style.display = stepId === "active" ? "block" : "none";
     }
 
@@ -560,10 +535,7 @@ class CloudSyncManager {
         const closeBtnActive = document.getElementById("btn-cloud-close");
 
         const configForm = document.getElementById("cloud-config-form");
-        const authForm = document.getElementById("cloud-auth-form");
-        const changeConfigBtn = document.getElementById("btn-cloud-change-config");
-        const logoutBtn = document.getElementById("btn-cloud-logout");
-        const toggleAuthModeBtn = document.getElementById("btn-cloud-toggle-auth-mode");
+        const disconnectBtn = document.getElementById("btn-cloud-disconnect");
 
         // Open Modal
         const showModal = () => {
@@ -571,8 +543,6 @@ class CloudSyncManager {
                 modal.style.display = "flex";
                 if (this.active) {
                     this.showSetupStep("active");
-                } else if (this.config) {
-                    this.showSetupStep("step-2");
                 } else {
                     this.showSetupStep("step-1");
                 }
@@ -592,112 +562,29 @@ class CloudSyncManager {
             });
         }
 
-        // Save Config
+        // Save Config & Connect
         if (configForm) {
             configForm.addEventListener("submit", (e) => {
                 e.preventDefault();
                 const apiKey = document.getElementById("cloud-apiKey").value.trim();
                 const projectId = document.getElementById("cloud-projectId").value.trim();
-                const authDomain = document.getElementById("cloud-authDomain").value.trim();
+                const cloudAuthDomain = document.getElementById("cloud-authDomain").value.trim();
                 const appId = document.getElementById("cloud-appId").value.trim();
 
-                const newConfig = { apiKey, projectId, authDomain, appId };
+                const newConfig = { apiKey, projectId, authDomain: cloudAuthDomain, appId };
                 
                 const success = this.initializeFirebase(newConfig);
                 if (success) {
-                    showToast("Firebase Config saved!");
-                    this.showSetupStep("step-2");
+                    showToast("Connected to Firebase Cloud!");
+                    this.showSetupStep("active");
                 }
             });
         }
 
-        // Change Config
-        if (changeConfigBtn) {
-            changeConfigBtn.addEventListener("click", () => {
-                // Pre-fill form if values exist
-                if (this.config) {
-                    document.getElementById("cloud-apiKey").value = this.config.apiKey || "";
-                    document.getElementById("cloud-projectId").value = this.config.projectId || "";
-                    document.getElementById("cloud-authDomain").value = this.config.authDomain || "";
-                    document.getElementById("cloud-appId").value = this.config.appId || "";
-                }
-                this.showSetupStep("step-1");
-            });
-        }
-
-        // Auth Form Toggle Login/Register
-        let registerMode = false;
-        if (toggleAuthModeBtn) {
-            toggleAuthModeBtn.addEventListener("click", () => {
-                registerMode = !registerMode;
-                const title = document.getElementById("cloud-auth-title");
-                const submitBtn = document.getElementById("btn-cloud-auth-submit");
-                
-                if (registerMode) {
-                    title.innerText = "Register New Account";
-                    submitBtn.innerText = "Register & Sign In";
-                    toggleAuthModeBtn.innerText = "Already have an account? Sign in here";
-                } else {
-                    title.innerText = "Sign In to Society Account";
-                    submitBtn.innerText = "Sign In";
-                    toggleAuthModeBtn.innerText = "Need a new account? Register here";
-                }
-            });
-        }
-
-        // Auth Submit (Login / Register)
-        if (authForm) {
-            authForm.addEventListener("submit", (e) => {
-                e.preventDefault();
-                if (!this.auth) {
-                    showToast("Firebase not initialized properly!", true);
-                    return;
-                }
-
-                const email = document.getElementById("cloud-email").value.trim();
-                const password = document.getElementById("cloud-password").value;
-                const submitBtn = document.getElementById("btn-cloud-auth-submit");
-                
-                submitBtn.disabled = true;
-                const originalText = submitBtn.innerText;
-                submitBtn.innerText = registerMode ? "Registering..." : "Signing In...";
-
-                const handleAuthSuccess = () => {
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = originalText;
-                    authForm.reset();
-                    showToast(registerMode ? "Account registered successfully!" : "Signed in successfully!");
-                };
-
-                const handleAuthError = (err) => {
-                    console.error("Firebase auth error", err);
-                    submitBtn.disabled = false;
-                    submitBtn.innerText = originalText;
-                    showToast(err.message, true);
-                };
-
-                if (registerMode) {
-                    this.auth.createUserWithEmailAndPassword(email, password)
-                        .then(handleAuthSuccess)
-                        .catch(handleAuthError);
-                } else {
-                    this.auth.signInWithEmailAndPassword(email, password)
-                        .then(handleAuthSuccess)
-                        .catch(handleAuthError);
-                }
-            });
-        }
-
-        // Logout
-        if (logoutBtn) {
-            logoutBtn.addEventListener("click", () => {
-                if (this.auth) {
-                    this.auth.signOut().then(() => {
-                        showToast("Signed out from cloud sync.");
-                    }).catch(err => {
-                        console.error("Logout failed", err);
-                    });
-                }
+        // Disconnect
+        if (disconnectBtn) {
+            disconnectBtn.addEventListener("click", () => {
+                this.onDisconnect();
             });
         }
 
