@@ -1864,10 +1864,10 @@ function handleImportBackup(e) {
                 }
             }
 
-            localStorage.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(parsedTransactions));
-            localStorage.setItem(STORAGE_KEYS.INCOME_HEADS, JSON.stringify(parsedIncomeHeads));
-            localStorage.setItem(STORAGE_KEYS.EXPENSE_HEADS, JSON.stringify(parsedExpenseHeads));
-            localStorage.setItem(STORAGE_KEYS.OPENING_BALANCES, JSON.stringify(parsedOpening));
+            db.saveTransactions(parsedTransactions);
+            db.saveIncomeHeads(parsedIncomeHeads);
+            db.saveExpenseHeads(parsedExpenseHeads);
+            db.saveOpeningBalances(parsedOpening);
 
             showToast("toast_backup_imported");
             fileInput.value = "";
