@@ -148,6 +148,7 @@ class CloudSyncManager {
             }, err => {
                 console.error("Firestore transactions listener error", err);
                 this.updateBadge(true);
+                showToast("Cloud sync error: " + err.message, true);
             });
         this.listeners.push(txListener);
 
@@ -159,6 +160,7 @@ class CloudSyncManager {
                 }
             }, err => {
                 console.error("Firestore opening balances listener error", err);
+                showToast("Cloud sync error: " + err.message, true);
             });
         this.listeners.push(opListener);
 
@@ -168,6 +170,7 @@ class CloudSyncManager {
                 this.handleRemoteCategoriesUpdate("income", snapshot);
             }, err => {
                 console.error("Firestore income heads listener error", err);
+                showToast("Cloud sync error: " + err.message, true);
             });
         this.listeners.push(incListener);
 
@@ -177,6 +180,7 @@ class CloudSyncManager {
                 this.handleRemoteCategoriesUpdate("expense", snapshot);
             }, err => {
                 console.error("Firestore expense heads listener error", err);
+                showToast("Cloud sync error: " + err.message, true);
             });
         this.listeners.push(expListener);
     }
@@ -277,21 +281,30 @@ class CloudSyncManager {
 
         this.firestore.doc(`transactions/${tx.id}`)
             .set(txCopy)
-            .catch(err => console.error("Sync Error uploading transaction", err));
+            .catch(err => {
+                console.error("Sync Error uploading transaction", err);
+                showToast("Cloud write failed: " + err.message, true);
+            });
     }
 
     deleteTransaction(txId) {
         if (!this.active || !this.firestore) return;
         this.firestore.doc(`transactions/${txId}`)
             .delete()
-            .catch(err => console.error("Sync Error deleting transaction", err));
+            .catch(err => {
+                console.error("Sync Error deleting transaction", err);
+                showToast("Cloud delete failed: " + err.message, true);
+            });
     }
 
     uploadOpeningBalances(balances) {
         if (!this.active || !this.firestore) return;
         this.firestore.doc("opening_balances/data")
             .set(balances)
-            .catch(err => console.error("Sync Error uploading opening balances", err));
+            .catch(err => {
+                console.error("Sync Error uploading opening balances", err);
+                showToast("Cloud write failed: " + err.message, true);
+            });
     }
 
     uploadCategory(type, head) {
@@ -302,7 +315,10 @@ class CloudSyncManager {
         const path = type === "income" ? "income_heads" : "expense_heads";
         this.firestore.doc(`${path}/${head.id}`)
             .set(headCopy)
-            .catch(err => console.error(`Sync Error uploading category ${type}`, err));
+            .catch(err => {
+                console.error(`Sync Error uploading category ${type}`, err);
+                showToast("Cloud write failed: " + err.message, true);
+            });
     }
 
     deleteCategory(type, headId) {
@@ -310,7 +326,10 @@ class CloudSyncManager {
         const path = type === "income" ? "income_heads" : "expense_heads";
         this.firestore.doc(`${path}/${headId}`)
             .delete()
-            .catch(err => console.error(`Sync Error deleting category ${type}`, err));
+            .catch(err => {
+                console.error(`Sync Error deleting category ${type}`, err);
+                showToast("Cloud delete failed: " + err.message, true);
+            });
     }
 
     async syncFullTransactions(transactions) {
